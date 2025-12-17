@@ -4,6 +4,7 @@
 #include "shader_s.h"
 #include "fshader.h"
 #include "vshader.h"
+#include <glm/glm.hpp>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -13,7 +14,7 @@ const int SCR_HEIGHT = 600;
 const float g = -9.8f;
 const float jump_power = 8.0f;
 
-int WinMain()
+int main()
 {
 	float acceleration = 0.0f;
 	float velocityY = 0.0f;

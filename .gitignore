@@ -2,5 +2,15 @@
 x64/
 *.vcxproj*
 
-# OpenGL dependencies
-glad.c
+# External libraries
+external/**
+!external/glad/includes/.keep
+!external/glad/src/.keep
+!external/glfw/includes/.keep
+!external/glfw/libs/.keep
+!external/glm/includes/.keep
+!external/stb_image/includes/.keep
+
+# Linux development
+build/**
+!build/.keep
