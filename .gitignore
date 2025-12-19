@@ -11,6 +11,10 @@ external/**
 !external/glm/includes/.keep
 !external/stb_image/includes/.keep
 
-# Linux development
+# Build files
 build/**
 !build/.keep
+
+# Assets
+assets/**
+!assets/.keep
