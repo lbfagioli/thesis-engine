@@ -5,9 +5,12 @@
 #include "fshader.h"
 #include "vshader.h"
 #include <glm/glm.hpp>
+#include <string>
+#include "root_directory.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
+std::string getPath(const std::string& path);
 
 const int SCR_WIDTH = 800;
 const int SCR_HEIGHT = 600;
@@ -128,4 +131,9 @@ void processInput(GLFWwindow* window)
 	{
 		glfwSetWindowShouldClose(window, true);
 	}
+}
+
+std::string getPath(const std::string& path)
+{
+	return std::string(root_directory) + "/" + path;
 }

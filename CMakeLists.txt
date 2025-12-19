@@ -7,7 +7,10 @@ add_executable(${PROJECT_NAME}
     ${CMAKE_SOURCE_DIR}/external/glad/src/glad.c
 )
 
+configure_file(configuration/root_directory.h.in configuration/root_directory.h)
+
 target_include_directories(${PROJECT_NAME} PUBLIC
+    ${CMAKE_BINARY_DIR}/configuration/
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/external/glad/includes
     ${CMAKE_SOURCE_DIR}/external/glfw/includes
