@@ -10,6 +10,7 @@ external/**
 !external/glfw/libs/.keep
 !external/glm/includes/.keep
 !external/stb_image/includes/.keep
+!external/stb_image/src/.keep
 
 # Build files
 build/**
