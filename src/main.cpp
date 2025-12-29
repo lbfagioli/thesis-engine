@@ -24,8 +24,8 @@ int main()
 {
 	glm::vec4 vec(1.0f, 0.0f, 0.0f, 1.0f);
 	glm::mat4 trans = glm::mat4(1.0f);
-	trans = glm::rotate(trans, glm::radians(90.0f), glm::vec3(0.0, 0.0, 1.0));
-	trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
+	// trans = glm::rotate(trans, glm::radians(90.0f), glm::vec3(0.0, 0.0, 1.0));
+	// trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
 
 	// trans = glm::translate(trans, glm::vec3(1.0f, 1.0f, 0.0f));
 	// vec = trans * vec;
@@ -115,7 +115,7 @@ int main()
 	}
 	stbi_image_free(data);
 
-	lastTime = glfwGetTime();
+	lastTime = (float)glfwGetTime();
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -128,10 +128,13 @@ int main()
 
 		shaderProgram.use();
 
-		unsigned int transformLoc = glGetUniformLocation(shaderProgram.ID, "transform");
-		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+		trans = glm::mat4(1.0f);
+		trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
+		trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
 
-		float time = glfwGetTime();
+		shaderProgram.setMat4("transform", trans);
+
+		float time = (float)glfwGetTime();
 		float fadeRate = (sin(time*2)*sin(time*2) / 2.0f) + 0.5f;
 		shaderProgram.setFloat("fading", fadeRate);
 		shaderProgram.setFloat("rotationIlusion", sin(time*3));
@@ -154,6 +157,14 @@ int main()
 
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		// trans = glm::mat4(1.0f);
+		// trans = glm::translate(trans, glm::vec3(-0.5f, 0.5f, 0.0f));
+		// trans = glm::scale(trans, glm::vec3(sin((float)glfwGetTime())));
+		
+		// shaderProgram.setMat4("transform", trans);
+
+		// glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();

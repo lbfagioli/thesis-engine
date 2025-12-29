@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <glm/glm.hpp>
 
 class Shader
 {
@@ -37,10 +38,14 @@ public:
 		glUseProgram(ID);
 	}
 
-	void setFloat(std::string name, float number)
+	void setFloat(const std::string &name, float number) const
 	{
-		int uniformLocation = glGetUniformLocation(ID, name.c_str());
-		glUniform1f(uniformLocation, number);
+		glUniform1f(getLoc(name), number);
+	}
+
+	void setMat4(const std::string &name, const glm::mat4 &mat) const
+	{
+		glUniformMatrix4fv(getLoc(name), 1, GL_FALSE, &mat[0][0]);
 	}
 
 private:
@@ -82,6 +87,11 @@ private:
 				std::cout << "failed to compile shader " << type << "\n" << infoLog << std::endl;
 			}
 		}
+	}
+
+	int getLoc(const std::string &name) const
+	{
+		return glGetUniformLocation(ID, name.c_str());
 	}
 };
 
