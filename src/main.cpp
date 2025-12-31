@@ -60,6 +60,10 @@ int main()
 		return -1;
 	}
 
+	int display_width, display_height;
+	glfwGetFramebufferSize(window, &display_width, &display_height);
+	glViewport(0, 0, display_width, display_height);
+
 	Shader shaderProgram(vertexSource, fragmentSource);
 
 	// tricolor triangle
@@ -146,6 +150,7 @@ int main()
 		positionY += (velocityY * deltaTime) / 5;
 		if (positionY < -0.5f)
 		{
+			positionY = -0.5f;
 			velocityY = 0.0f;
 		}
 		if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
