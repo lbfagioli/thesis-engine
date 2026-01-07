@@ -9,14 +9,16 @@ layout (location = 2) in vec2 aTexCoords;
 
 uniform float rotationIlusion;
 uniform float verticalOffset;
-uniform mat4 transform;
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
 
 out vec4 vColor;
 out vec2 TexCoords;
 
 void main()
 {
-	gl_Position = transform * vec4(aPos.x, aPos.y + verticalOffset, aPos.z, 1.0);
+	gl_Position = projection * view * model * vec4(aPos.x, aPos.y + verticalOffset, aPos.z, 1.0);
 	vColor = vec4((aColor.x + gl_Position.x), (aColor.y + gl_Position.y), (aColor.z + gl_Position.z), 1.0);
 	TexCoords = aTexCoords;
 }

@@ -44,7 +44,7 @@ int main()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "triangulo jugueton que cae", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "triangle", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "failed to create glfw window" << std::endl;
@@ -133,10 +133,17 @@ int main()
 		shaderProgram.use();
 
 		trans = glm::mat4(1.0f);
-		trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
-		trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+		trans = glm::rotate(trans, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-		shaderProgram.setMat4("transform", trans);
+		glm::mat4 view = glm::mat4(1.0f);
+		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+
+		glm::mat4 projection = glm::mat4(1.0f);
+		projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
+
+		shaderProgram.setMat4("model", trans);
+		shaderProgram.setMat4("view", view);
+		shaderProgram.setMat4("projection", projection);
 
 		float time = (float)glfwGetTime();
 		float fadeRate = (sin(time*2)*sin(time*2) / 2.0f) + 0.5f;
