@@ -19,6 +19,7 @@ const int SCR_WIDTH = 800;
 const int SCR_HEIGHT = 600;
 const float g = -9.8f;
 const float jump_power = 8.0f;
+float deltaTime = 0.0f;
 
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -41,7 +42,6 @@ int main()
 	float positionY = 0.0f;
 	float currentTime = 0.0f;
 	float lastTime = 0.0f;
-	float deltaTime = 0.0f;
 	
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -284,7 +284,7 @@ void processInput(GLFWwindow* window)
 	{
 		glfwSetWindowShouldClose(window, true);
 	}
-	const float cameraSpeed = 0.05f;
+	const float cameraSpeed = 2.5f * deltaTime;
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 		cameraPos += cameraSpeed * cameraFront;
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
