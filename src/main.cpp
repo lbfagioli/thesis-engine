@@ -14,16 +14,25 @@
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 std::string getPath(const std::string& path);
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 
 const int SCR_WIDTH = 800;
 const int SCR_HEIGHT = 600;
+
 const float g = -9.8f;
 const float jump_power = 8.0f;
+
 float deltaTime = 0.0f;
 
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+float lastX = 400.0f;
+float lastY = 300.0f;
+float pitch = 0.0f;
+float yaw = -90.0f;
+bool firstMouse = true;
 
 int main()
 {
@@ -67,6 +76,8 @@ int main()
 	int display_width, display_height;
 	glfwGetFramebufferSize(window, &display_width, &display_height);
 	glViewport(0, 0, display_width, display_height);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetCursorPosCallback(window, mouse_callback);
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -298,4 +309,38 @@ void processInput(GLFWwindow* window)
 std::string getPath(const std::string& path)
 {
 	return std::string(root_directory) + "/" + path;
+}
+
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
+{
+	float xpos = static_cast<float>(xposIn);
+	float ypos = static_cast<float>(yposIn);
+	if (firstMouse)
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos;
+	lastX = xpos;
+	lastY = ypos;
+
+	const float sensitivity = 0.1f;
+	xoffset *= sensitivity;
+	yoffset *= sensitivity;
+
+	yaw += xoffset;
+	pitch += yoffset;
+
+	if (pitch > 89.0f)
+		pitch = 89.0f;
+	if (pitch < -89.0f)
+		pitch = -89.0f;
+
+	glm::vec3 frontDirection;
+	frontDirection.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	frontDirection.y = sin(glm::radians(pitch));
+	frontDirection.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	cameraFront = glm::normalize(frontDirection);
 }
