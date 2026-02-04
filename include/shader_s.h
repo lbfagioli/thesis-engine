@@ -48,6 +48,11 @@ public:
 		glUniformMatrix4fv(getLoc(name), 1, GL_FALSE, &mat[0][0]);
 	}
 
+	void setVec3(const std::string &name, float x, float y, float z) const
+	{
+		glUniform3f(getLoc(name), x, y, z);
+	}
+
 private:
 	unsigned int makeShader(unsigned int SHADER_TYPE, const char* source)
 	{
