@@ -189,10 +189,22 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		cubeShader.use();
-		cubeShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-		cubeShader.setVec3("lightPos", lightPos);
 		cubeShader.setVec3("viewPos", cameraPos);
+
+		cubeShader.setVec3("light.position", lightPos);
+
+		glm::vec3 lightColor;
+		lightColor.x = (float)sin(glfwGetTime() * 2.0f);
+		lightColor.y = (float)sin(glfwGetTime() * 0.7f);
+		lightColor.z = (float)sin(glfwGetTime() * 1.3f);
 		
+		glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
+		glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);
+
+		cubeShader.setVec3("light.ambient", ambientColor);
+		cubeShader.setVec3("light.diffuse", diffuseColor);
+		cubeShader.setVec3("light.specular", glm::vec3(1.0f));
+
 		cubeShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
 		cubeShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
 		cubeShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
