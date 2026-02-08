@@ -20,14 +20,28 @@ void main()
 const char* cubeFSH = R"FSH(
 #version 330 core
 
+in vec3 Normal;
+in vec3 FragPos;
 out vec4 FragColor;
 
 uniform vec3 ownColor;
 uniform vec3 lightColor;
+uniform vec3 lightPos;
 
 void main()
 {
-	FragColor = vec4(lightColor * ownColor, 1.0);
+	vec3 norm = normalize(Normal);
+	vec3 lightDir = normalize(lightPos - FragPos);
+
+	float impact = max(dot(norm, lightDir), 0.0);
+	vec3 diffuse = impact * lightColor;
+
+	float ambientStrength = 0.1;
+	vec3 ambient = ambientStrength * lightColor;
+
+	vec3 color = (ambient + diffuse) * ownColor;
+
+	FragColor = vec4(color, 1.0);
 }
 )FSH";
 

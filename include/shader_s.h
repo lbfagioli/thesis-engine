@@ -53,6 +53,11 @@ public:
 		glUniform3f(getLoc(name), x, y, z);
 	}
 
+	void setVec3(const std::string &name, glm::vec3 vec) const
+	{
+		glUniform3fv(getLoc(name), 1, &vec[0]);
+	}
+
 private:
 	unsigned int makeShader(unsigned int SHADER_TYPE, const char* source)
 	{
