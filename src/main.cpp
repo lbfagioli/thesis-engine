@@ -192,6 +192,7 @@ int main()
 		cubeShader.setVec3("ownColor", 1.0f, 0.5f, 0.31f);
 		cubeShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
 		cubeShader.setVec3("lightPos", lightPos);
+		cubeShader.setVec3("viewPos", cameraPos);
 
 		glm::mat4 model(1.0f);
 		glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
