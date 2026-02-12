@@ -38,6 +38,11 @@ public:
 		glUseProgram(ID);
 	}
 
+	void setInt(const std::string &name, int number) const
+	{
+		glUniform1i(getLoc(name), number);
+	}
+
 	void setFloat(const std::string &name, float number) const
 	{
 		glUniform1f(getLoc(name), number);
