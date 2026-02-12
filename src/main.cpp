@@ -155,31 +155,7 @@ int main()
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
-
-	// unsigned int texture1;
 	
-	// glGenTextures(1, &texture1);
-	// glBindTexture(GL_TEXTURE_2D, texture1);
-
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	// int width, height, nrChannels;
-	// stbi_set_flip_vertically_on_load(true);
-
-	// unsigned char *data = stbi_load(getPath("assets/container.jpg").c_str(), &width, &height, &nrChannels, 0);
-	// if (data)
-	// {
-	// 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	// 	glGenerateMipmap(GL_TEXTURE_2D);
-	// }
-	// else
-	// {
-	// 	std::cout << "error: failed to load texture" << std::endl;
-	// }
-	// stbi_image_free(data);
 	unsigned int diffuseTexture = getTexture("assets/container2.png");
 
 	lastTime = (float)glfwGetTime();
@@ -200,9 +176,6 @@ int main()
 		cubeShader.setVec3("light.position", lightPos);
 
 		glm::vec3 lightColor(1.0f);
-		// lightColor.x = (float)sin(glfwGetTime() * 2.0f);
-		// lightColor.y = (float)sin(glfwGetTime() * 0.7f);
-		// lightColor.z = (float)sin(glfwGetTime() * 1.3f);
 		
 		glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
 		glm::vec3 ambientColor = lightColor * glm::vec3(0.2f);
@@ -213,7 +186,7 @@ int main()
 
 		cubeShader.setInt("material.diffuse", 0);
 		useTexture(diffuseTexture, 0);
-		
+
 		cubeShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
 		cubeShader.setFloat("material.shininess", 32.0f);
 
@@ -237,8 +210,6 @@ int main()
 			{
 				velocityY = jump_power;
 			}
-			// cubeShader.setFloat("verticalOffset", positionY);
-			// cubePos.y = positionY;
 			model = glm::translate(model, cubePos);
 			cubeShader.setMat4("model", model);
 
