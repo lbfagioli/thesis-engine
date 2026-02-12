@@ -157,6 +157,7 @@ int main()
 	glBindVertexArray(0);
 	
 	unsigned int diffuseTexture = getTexture("assets/container2.png");
+	unsigned int specularTexture = getTexture("assets/container2_specular.png");
 
 	lastTime = (float)glfwGetTime();
 
@@ -187,7 +188,9 @@ int main()
 		cubeShader.setInt("material.diffuse", 0);
 		useTexture(diffuseTexture, 0);
 
-		cubeShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+		cubeShader.setInt("material.specular", 1);
+		useTexture(specularTexture, 1);
+
 		cubeShader.setFloat("material.shininess", 32.0f);
 
 		glm::mat4 model(1.0f);
