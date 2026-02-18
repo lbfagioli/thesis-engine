@@ -43,8 +43,8 @@ out vec2 TexCoords;
 void main()
 {
 	gl_Position = projection * view * model * vec4(aPos, 1.0);
-	// Normal = mat3(transpose(inverse(model))) * aNormal; // this is necessary when doing non-uniform scaling, but better send the normal matrix via uniform
-	Normal = aNormal;
+	Normal = mat3(transpose(inverse(model))) * aNormal; // this is necessary when doing non-uniform scaling, but better send the normal matrix via uniform. UPDATE: do everytime you change the model
+	// Normal = aNormal;
 	FragPos = vec3(model * vec4(aPos, 1.0));
 	TexCoords = aTexCoords;
 }
