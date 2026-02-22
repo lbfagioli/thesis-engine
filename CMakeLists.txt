@@ -23,25 +23,27 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_SOURCE_DIR}/include
     ${EXT_DIR}/glfw/includes
     ${EXT_DIR}/glm/includes
+    ${EXT_DIR}/assimp/includes
 )
 
-target_link_directories(${PROJECT_NAME} PUBLIC
-    ${EXT_DIR}/glfw/libs
-)
+# target_link_directories(${PROJECT_NAME} PUBLIC
+#     ${EXT_DIR}/glfw/libs
+# )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
     OpenGL::GL
     glad
     stb_image
+    ${EXT_DIR}/assimp/libs/assimp-vc143-mtd.lib
 )
 
 if(WIN32)
     target_link_libraries(${PROJECT_NAME} PUBLIC
-        glfw3.lib
+        ${EXT_DIR}/glfw/libs/glfw3.lib
     )
 else()
     target_link_libraries(${PROJECT_NAME} PUBLIC
-        libglfw3.a
+        ${EXT_DIR}/glfw/libs/libglfw3.a
         m
         X11
         pthread

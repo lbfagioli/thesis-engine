@@ -11,6 +11,8 @@ external/**
 !external/glm/includes/.keep
 !external/stb_image/includes/.keep
 !external/stb_image/src/.keep
+!external/assimp/includes/.keep
+!external/assimp/libs/.keep
 
 # Build files
 build/**

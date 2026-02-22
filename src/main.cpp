@@ -10,6 +10,7 @@
 #include <string>
 #include "root_directory.h"
 #include <stb_image.h>
+#include <assimp/Importer.hpp>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
