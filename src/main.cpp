@@ -10,7 +10,7 @@
 #include <string>
 #include "root_directory.h"
 #include <stb_image.h>
-#include <assimp/Importer.hpp>
+#include "model.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -130,7 +130,7 @@ int main()
     };
 
 	glm::vec3 cubePositions[] = {
-        glm::vec3( 0.0f,  0.0f,  0.0f),
+        // glm::vec3( 0.0f,  0.0f,  0.0f),
         glm::vec3( 2.0f,  5.0f, -15.0f),
         glm::vec3(-1.5f, -2.2f, -2.5f),
         glm::vec3(-3.8f, -2.0f, -12.3f),
@@ -179,6 +179,8 @@ int main()
 	
 	unsigned int diffuseTexture = getTexture("assets/container2.png");
 	unsigned int specularTexture = getTexture("assets/container2_specular.png");
+
+	Model backpack(getPath("assets/backpack/backpack.obj"));
 
 	lastTime = (float)glfwGetTime();
 
@@ -295,11 +297,18 @@ int main()
 
 		}
 
+		glm::mat4 model(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		cubeShader.setMat4("model", model);
+
+		backpack.Draw(cubeShader);
+
 		glBindVertexArray(cubeVAO);
 
 		for (unsigned int i = 0; i < 10 ; i++)
 		{
-			glm::mat4 model(1.0f);
+			model = glm::mat4(1.0f);
 			model = glm::translate(model, cubePos);
 			model = glm::translate(model, cubePositions[i]);
 
