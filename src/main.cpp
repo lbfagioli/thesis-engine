@@ -183,12 +183,23 @@ int main()
 	Model backpack(getPath("assets/backpack/backpack.obj"));
 
 	lastTime = (float)glfwGetTime();
+	int lastSeconds = std::stoi(std::to_string(currentTime));
+	int frames = 0;
 
 	while (!glfwWindowShouldClose(window))
 	{
 		currentTime = (float)glfwGetTime();
 		deltaTime = currentTime - lastTime;
 		lastTime = currentTime;
+
+		int seconds = std::stoi(std::to_string(currentTime));
+		if (seconds - lastSeconds >= 2)
+		{
+			cout << "FPS: " << frames / (seconds - lastSeconds) << endl;
+			frames = 0;
+			lastSeconds = seconds;
+		}
+		frames++;
 
 		processInput(window);
 		glClearColor(0.15f, 0.15f, 0.15f, 1.0f);
