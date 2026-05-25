@@ -1,6 +1,6 @@
 #pragma once
 
-const char* vertexSource = R"VSH(
+inline const char* vertexSource = R"VSH(
 #version 330 core
 
 layout (location = 0) in vec3 aPos;
@@ -24,7 +24,7 @@ void main()
 }
 )VSH";
 
-const char* cubeVSH = R"VSH(
+inline const char* cubeVSH = R"VSH(
 #version 330 core
 
 layout (location = 0) in vec3 aPos;
@@ -52,7 +52,7 @@ void main()
 
 
 
-const char* lightVSH = R"VSH(
+inline const char* lightVSH = R"VSH(
 #version 330 core
 
 layout (location = 0) in vec3 aPos;
@@ -68,7 +68,7 @@ void main()
 }
 )VSH";
 
-const char* screenVSH = R"VSH(
+inline const char* screenVSH = R"VSH(
 #version 330 core
 
 layout (location = 0) in vec3 aPos;

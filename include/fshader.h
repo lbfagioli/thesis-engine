@@ -1,6 +1,6 @@
 #pragma once
 
-const char* fragmentSource = R"FSH(
+inline const char* fragmentSource = R"FSH(
 #version 330 core
 
 in vec4 vColor;
@@ -17,7 +17,7 @@ void main()
 }
 )FSH";
 
-const char* cubeFSH = R"FSH(
+inline const char* cubeFSH = R"FSH(
 #version 330 core
 
 in vec3 Normal;
@@ -28,8 +28,8 @@ out vec4 FragColor;
 
 struct Material {
 	// vec3 ambient;
-	sampler2D diffuse;
-	sampler2D specular;
+	sampler2D texture_diffuse1;
+	sampler2D texture_specular1;
 	float shininess;
 };
 
@@ -91,7 +91,7 @@ void main()
 	for (int i = 0; i < NR_POINT_LIGHTS; i++)
 		color += CalcPointLight(pointLights[i], norm, FragPos, viewDir);
 	
-	color += CalcSpotLight(spotLight, norm, FragPos, viewDir);
+	// color += CalcSpotLight(spotLight, norm, FragPos, viewDir);
 
 	FragColor = vec4(color, 1.0);
 }
@@ -105,9 +105,9 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
 	vec3 reflectDir = reflect(-lightDir, normal);
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
 
-	vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
-	vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, TexCoords));
-	vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
+	vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse1, TexCoords));
+	vec3 diffuse = light.diffuse * diff * vec3(texture(material.texture_diffuse1, TexCoords));
+	vec3 specular = light.specular * spec * vec3(texture(material.texture_specular1, TexCoords));
 
 	return (ambient + diffuse + specular);
 }
@@ -115,18 +115,18 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 {
 	// ambient
-	vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
+	vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse1, TexCoords));
 
 	// diffuse
 	vec3 lightDir = normalize(light.position - fragPos);
 
 	float impact = max(dot(normal, lightDir), 0.0);
-	vec3 diffuse = light.diffuse * impact * vec3(texture(material.diffuse, TexCoords));
+	vec3 diffuse = light.diffuse * impact * vec3(texture(material.texture_diffuse1, TexCoords));
 
 	// specular
 	vec3 reflectDir = reflect(-lightDir, normal);
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-	vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
+	vec3 specular = light.specular * spec * vec3(texture(material.texture_specular1, TexCoords));
 
 	// attenuation
 	float distance = length(light.position - fragPos);
@@ -147,16 +147,16 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 	float intensity = clamp((theta - light.outerCutoff) / epsilon, 0.0, 1.0);
 	
 	// ambient
-	vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
+	vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse1, TexCoords));
 
 	// diffuse
 	float impact = max(dot(normal, lightDir), 0.0);
-	vec3 diffuse = light.diffuse * impact * vec3(texture(material.diffuse, TexCoords));
+	vec3 diffuse = light.diffuse * impact * vec3(texture(material.texture_diffuse1, TexCoords));
 
 	// specular
 	vec3 reflectDir = reflect(-lightDir, normal);
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-	vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
+	vec3 specular = light.specular * spec * vec3(texture(material.texture_specular1, TexCoords));
 
 	// attenuation
 	float distance = length(light.position - fragPos);
@@ -172,7 +172,7 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 
 
 
-const char* lightFSH = R"FSH(
+inline const char* lightFSH = R"FSH(
 #version 330 core
 
 out vec4 FragColor;
@@ -184,7 +184,7 @@ void main()
 )FSH";
 
 
-const char* geometryFSH = R"FSH(
+inline const char* geometryFSH = R"FSH(
 #version 330 core
 
 layout (location = 0) out vec3 gPosition;
@@ -212,7 +212,7 @@ void main()
 }
 )FSH";
 
-const char* screenFSH = R"FSH(
+inline const char* screenFSH = R"FSH(
 #version 330 core
 
 out vec4 FragColor;
@@ -242,6 +242,11 @@ void main()
 {
 	vec3 FragPos = texture(gPosition, TexCoords).rgb;
 	vec3 Normal = texture(gNormal, TexCoords).rgb;
+
+	// Discard background pixels that have no geometry (gPosition is sentinel 0,0,0)
+	if (length(FragPos) < 0.001 && length(Normal) < 0.001)
+		discard;
+
 	vec3 Diffuse = texture(gAlbedoSpec, TexCoords).rgb;
 	float Specular = texture(gAlbedoSpec, TexCoords).a;
 
