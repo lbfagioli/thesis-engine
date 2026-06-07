@@ -6,6 +6,7 @@
 #include "fshader.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <string>
 #include <vector>
 
 class ForwardRenderer : public IRenderPipeline
@@ -27,6 +28,7 @@ public:
         , m_lightShader(std::move(other.m_lightShader))
         , m_lightCubeVAO(other.m_lightCubeVAO)
         , m_lightCubeVBO(other.m_lightCubeVBO)
+        , m_lightCount(other.m_lightCount)
     {
         other.m_lightCubeVAO = 0;
         other.m_lightCubeVBO = 0;
@@ -42,72 +44,77 @@ public:
             m_lightShader = std::move(other.m_lightShader);
             m_lightCubeVAO = other.m_lightCubeVAO;
             m_lightCubeVBO = other.m_lightCubeVBO;
+            m_lightCount = other.m_lightCount;
             other.m_lightCubeVAO = 0;
             other.m_lightCubeVBO = 0;
         }
         return *this;
     }
 
-    void init(int width, int height) override
+    void init(int width, int height, int lightCount) override
     {
+        m_lightCount = lightCount;
+
+        // Recompile geometry shader with the correct NR_POINT_LIGHTS
+        std::string cubeSrc = getCubeFSH(lightCount);
+        m_geometryShader = Shader(cubeVSH, cubeSrc.c_str());
+        m_lightShader = Shader(lightVSH, lightFSH);
+
+        // DIAGNOSTIC: Verify the compiled program ID and light count
+        std::cout << "[DIAG ForwardRenderer::init] lightCount=" << lightCount
+                  << ", m_geometryShader id=" << m_geometryShader.id()
+                  << ", m_lightCount=" << m_lightCount << std::endl;
+
         setupLightCube();
     }
 
     void beginGeometryPass(const glm::mat4& view,
                            const glm::mat4& projection,
                            const glm::vec3& viewPos,
-                           const std::vector<glm::vec3>& lightPositions) override
+                           const std::vector<glm::vec3>& lightPositions,
+                           const std::vector<glm::vec3>& lightColors) override
     {
+        // Clear the default framebuffer (matching Deferred's clear behaviour)
+        glClearColor(0.15f, 0.15f, 0.15f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         m_geometryShader.use();
         m_geometryShader.setMat4("view", view);
         m_geometryShader.setMat4("projection", projection);
         m_geometryShader.setVec3("viewPos", viewPos);
 
-        // Directional light
-        m_geometryShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
-        m_geometryShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
-        m_geometryShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
-        m_geometryShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+        // Point lights only — unified model matching Deferred screenFSH
+        size_t nLights = lightPositions.size();
+        if (nLights > static_cast<size_t>(m_lightCount))
+            nLights = static_cast<size_t>(m_lightCount);
 
-        // Point lights
-        for (size_t i = 0; i < lightPositions.size() && i < 4; ++i)
+        size_t nColors = lightColors.size();
+        for (size_t i = 0; i < nLights; ++i)
         {
             std::string prefix = "pointLights[" + std::to_string(i) + "]";
             m_geometryShader.setVec3(prefix + ".position",  lightPositions[i]);
-            m_geometryShader.setFloat(prefix + ".constant",  1.0f);
             m_geometryShader.setFloat(prefix + ".linear",    0.09f);
             m_geometryShader.setFloat(prefix + ".quadratic", 0.032f);
-            m_geometryShader.setVec3(prefix + ".ambient",  0.05f, 0.05f, 0.05f);
-            m_geometryShader.setVec3(prefix + ".diffuse",  0.8f, 0.8f, 0.8f);
-            m_geometryShader.setVec3(prefix + ".specular", 1.0f, 1.0f, 1.0f);
+            // Use per-light colour if available, otherwise fall back to white
+            glm::vec3 col = (i < nColors) ? lightColors[i] : glm::vec3(1.0f);
+            m_geometryShader.setVec3(prefix + ".color", col);
         }
-
-        // Spot light (flashlight attached to camera)
-        m_geometryShader.setVec3("spotLight.position", viewPos);
-        m_geometryShader.setVec3("spotLight.direction", cameraFront);
-        m_geometryShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
-        m_geometryShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
-        m_geometryShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
-        m_geometryShader.setFloat("spotLight.constant", 1.0f);
-        m_geometryShader.setFloat("spotLight.linear", 0.09f);
-        m_geometryShader.setFloat("spotLight.quadratic", 0.032f);
-        m_geometryShader.setFloat("spotLight.cutoff", glm::cos(glm::radians(12.5f)));
-        m_geometryShader.setFloat("spotLight.outerCutoff", glm::cos(glm::radians(15.0f)));
 
         // Material
         m_geometryShader.setFloat("material.shininess", 32.0f);
     }
 
-    void endGeometryPass(const glm::vec3& viewPos,
-                         const std::vector<glm::vec3>& lightPositions) override
+    void endGeometryPass(const glm::vec3& /*viewPos*/,
+                         const std::vector<glm::vec3>& /*lightPositions*/,
+                         const std::vector<glm::vec3>& /*lightColors*/) override
     {
         // Forward renderer does all lighting in the geometry shader during draw.
-        // Point lights are set externally via getGeometryShader() before each draw call.
     }
 
     void renderDebugLights(const glm::mat4& view,
                            const glm::mat4& projection,
-                           const std::vector<glm::vec3>& lightPositions) override
+                           const std::vector<glm::vec3>& lightPositions,
+                           const std::vector<glm::vec3>& lightColors) override
     {
         m_lightShader.use();
         m_lightShader.setMat4("view", view);
@@ -130,8 +137,6 @@ public:
         return m_geometryShader;
     }
 
-    void setCameraFront(const glm::vec3& front) override { cameraFront = front; }
-
 private:
     Shader m_geometryShader{ cubeVSH, cubeFSH };
     Shader m_lightShader{ lightVSH, lightFSH };
@@ -139,7 +144,7 @@ private:
     unsigned int m_lightCubeVAO = 0;
     unsigned int m_lightCubeVBO = 0;
 
-    glm::vec3 cameraFront{ 0.0f, 0.0f, -1.0f };
+    int m_lightCount = 4;
 
     void setupLightCube()
     {

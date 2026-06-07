@@ -7,6 +7,7 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <string>
 #include <vector>
 #include <iostream>
 
@@ -38,6 +39,7 @@ public:
         , m_lightCubeVBO(other.m_lightCubeVBO)
         , m_width(other.m_width)
         , m_height(other.m_height)
+        , m_lightCount(other.m_lightCount)
     {
         other.m_gBuffer = 0;
         other.m_gPosition = 0;
@@ -69,6 +71,7 @@ public:
             m_lightCubeVBO = other.m_lightCubeVBO;
             m_width = other.m_width;
             m_height = other.m_height;
+            m_lightCount = other.m_lightCount;
             other.m_gBuffer = 0;
             other.m_gPosition = 0;
             other.m_gNormal = 0;
@@ -82,15 +85,23 @@ public:
         return *this;
     }
 
-    void init(int width, int height) override
+    void init(int width, int height, int lightCount) override
     {
         m_width = width;
         m_height = height;
+        m_lightCount = lightCount;
 
-        // Compile shaders
+        // Compile shaders with dynamic light count
+        std::string screenSrc = getScreenFSH(lightCount);
         m_geometryShader = Shader(cubeVSH, geometryFSH);
-        m_screenShader = Shader(screenVSH, screenFSH);
+        m_screenShader = Shader(screenVSH, screenSrc.c_str());
         m_lightShader = Shader(lightVSH, lightFSH);
+
+        // DIAGNOSTIC: Verify the compiled program IDs and light count
+        std::cout << "[DIAG DeferredRenderer::init] lightCount=" << lightCount
+                  << ", m_screenShader (lighting pass) id=" << m_screenShader.id()
+                  << ", m_geometryShader id=" << m_geometryShader.id()
+                  << ", m_lightCount=" << m_lightCount << std::endl;
 
         // Create G-Buffer
         glGenFramebuffers(1, &m_gBuffer);
@@ -152,7 +163,8 @@ public:
     void beginGeometryPass(const glm::mat4& view,
                            const glm::mat4& projection,
                            const glm::vec3& viewPos,
-                           const std::vector<glm::vec3>& /*lightPositions*/) override
+                           const std::vector<glm::vec3>& /*lightPositions*/,
+                           const std::vector<glm::vec3>& /*lightColors*/) override
     {
         glBindFramebuffer(GL_FRAMEBUFFER, m_gBuffer);
 
@@ -171,22 +183,30 @@ public:
     }
 
     void endGeometryPass(const glm::vec3& viewPos,
-                         const std::vector<glm::vec3>& lightPositions) override
+                         const std::vector<glm::vec3>& lightPositions,
+                         const std::vector<glm::vec3>& lightColors) override
     {
         // Unbind G-Buffer
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Lighting pass
+        // Lighting pass — uses per-light colours matching Forward
         m_screenShader.use();
         m_screenShader.setVec3("viewPos", viewPos);
 
-        for (size_t i = 0; i < lightPositions.size() && i < 4; ++i)
+        size_t nLights = lightPositions.size();
+        if (nLights > static_cast<size_t>(m_lightCount))
+            nLights = static_cast<size_t>(m_lightCount);
+
+        size_t nColors = lightColors.size();
+        for (size_t i = 0; i < nLights; ++i)
         {
             m_screenShader.setVec3("pointLights[" + std::to_string(i) + "].position", lightPositions[i]);
-            m_screenShader.setVec3("pointLights[" + std::to_string(i) + "].color", glm::vec3(1.0f));
             m_screenShader.setFloat("pointLights[" + std::to_string(i) + "].linear", 0.09f);
             m_screenShader.setFloat("pointLights[" + std::to_string(i) + "].quadratic", 0.032f);
+            // Use per-light colour if available, otherwise fall back to white
+            glm::vec3 col = (i < nColors) ? lightColors[i] : glm::vec3(1.0f);
+            m_screenShader.setVec3("pointLights[" + std::to_string(i) + "].color", col);
         }
 
         // Bind G-Buffer textures
@@ -210,7 +230,8 @@ public:
 
     void renderDebugLights(const glm::mat4& view,
                            const glm::mat4& projection,
-                           const std::vector<glm::vec3>& lightPositions) override
+                           const std::vector<glm::vec3>& lightPositions,
+                           const std::vector<glm::vec3>& /*lightColors*/) override
     {
         m_lightShader.use();
         m_lightShader.setMat4("view", view);
@@ -233,8 +254,6 @@ public:
         return m_geometryShader;
     }
 
-    void setCameraFront(const glm::vec3& /*front*/) override {}
-
 private:
     Shader m_geometryShader{ cubeVSH, geometryFSH };
     Shader m_screenShader{ screenVSH, screenFSH };
@@ -254,6 +273,7 @@ private:
 
     int m_width = 800;
     int m_height = 600;
+    int m_lightCount = 4;
 
     void setupQuad()
     {

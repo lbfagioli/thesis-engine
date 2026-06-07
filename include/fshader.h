@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 inline const char* fragmentSource = R"FSH(
 #version 330 core
 
@@ -17,6 +19,8 @@ void main()
 }
 )FSH";
 
+// Unified Forward Shader: point lights only, texture reads hoisted outside loop.
+// Lighting model matches Deferred screenFSH exactly: global ambient + per-light diffuse/specular.
 inline const char* cubeFSH = R"FSH(
 #version 330 core
 
@@ -27,43 +31,14 @@ in vec2 TexCoords;
 out vec4 FragColor;
 
 struct Material {
-	// vec3 ambient;
 	sampler2D texture_diffuse1;
 	sampler2D texture_specular1;
 	float shininess;
 };
 
-struct DirLight {
-	vec3 direction;
-
-	vec3 ambient;
-	vec3 diffuse;
-	vec3 specular;
-};
-
 struct PointLight {
 	vec3 position;
-
-	float constant;
-	float linear;
-	float quadratic;
-
-	vec3 ambient;
-	vec3 diffuse;
-	vec3 specular;
-};
-
-struct SpotLight {
-	vec3 position;
-	vec3 direction;
-	float cutoff;
-	float outerCutoff;
-
-	vec3 ambient;
-	vec3 diffuse;
-	vec3 specular;
-
-	float constant;
+	vec3 color;       // diffuse & specular colour
 	float linear;
 	float quadratic;
 };
@@ -72,101 +47,52 @@ struct SpotLight {
 
 uniform Material material;
 uniform vec3 viewPos;
-
-uniform DirLight dirLight;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
-uniform SpotLight spotLight;
 
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
-vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
+                    vec3 diffuseTex, float specularTex);
 
 void main()
 {
 	vec3 norm = normalize(Normal);
 	vec3 viewDir = normalize(viewPos - FragPos);
 
-	vec3 color = CalcDirLight(dirLight, norm, viewDir);
+	// --- Hoist texture reads OUTSIDE the per-light loop ---
+	// This guarantees O(1) texture fetches regardless of NR_POINT_LIGHTS,
+	// making the comparison fair and portable across GPU vendors.
+	vec3 diffuseTex  = texture(material.texture_diffuse1,  TexCoords).rgb;
+	float specularTex = texture(material.texture_specular1, TexCoords).r;
+
+	// Global ambient (identical to Deferred screenFSH)
+	vec3 ambient = diffuseTex * 0.05;
+	vec3 color = ambient;
 
 	for (int i = 0; i < NR_POINT_LIGHTS; i++)
-		color += CalcPointLight(pointLights[i], norm, FragPos, viewDir);
-	
-	// color += CalcSpotLight(spotLight, norm, FragPos, viewDir);
+		color += CalcPointLight(pointLights[i], norm, FragPos, viewDir,
+		                        diffuseTex, specularTex);
 
 	FragColor = vec4(color, 1.0);
 }
 
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
+                    vec3 diffuseTex, float specularTex)
 {
-	vec3 lightDir = normalize(-light.direction);
+	vec3 lightDir = normalize(light.position - fragPos);
 
+	// diffuse
 	float diff = max(dot(normal, lightDir), 0.0);
+	vec3 diffuse = light.color * diff * diffuseTex;
 
+	// specular (scalar specular, matching Deferred)
 	vec3 reflectDir = reflect(-lightDir, normal);
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+	vec3 specular = light.color * spec * specularTex;
 
-	vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse1, TexCoords));
-	vec3 diffuse = light.diffuse * diff * vec3(texture(material.texture_diffuse1, TexCoords));
-	vec3 specular = light.specular * spec * vec3(texture(material.texture_specular1, TexCoords));
-
-	return (ambient + diffuse + specular);
-}
-
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
-{
-	// ambient
-	vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse1, TexCoords));
-
-	// diffuse
-	vec3 lightDir = normalize(light.position - fragPos);
-
-	float impact = max(dot(normal, lightDir), 0.0);
-	vec3 diffuse = light.diffuse * impact * vec3(texture(material.texture_diffuse1, TexCoords));
-
-	// specular
-	vec3 reflectDir = reflect(-lightDir, normal);
-	float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-	vec3 specular = light.specular * spec * vec3(texture(material.texture_specular1, TexCoords));
-
-	// attenuation
+	// attenuation (constant = 1.0, matching Deferred)
 	float distance = length(light.position - fragPos);
-	float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+	float attenuation = 1.0 / (1.0 + light.linear * distance + light.quadratic * (distance * distance));
 
-	ambient *= attenuation;
-	diffuse *= attenuation;
-	specular *= attenuation;
-
-	return (ambient + diffuse + specular);
-}
-
-vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
-{
-	vec3 lightDir = normalize(light.position - fragPos);
-	float theta = dot(lightDir, normalize(-light.direction));
-	float epsilon = light.cutoff - light.outerCutoff;
-	float intensity = clamp((theta - light.outerCutoff) / epsilon, 0.0, 1.0);
-	
-	// ambient
-	vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse1, TexCoords));
-
-	// diffuse
-	float impact = max(dot(normal, lightDir), 0.0);
-	vec3 diffuse = light.diffuse * impact * vec3(texture(material.texture_diffuse1, TexCoords));
-
-	// specular
-	vec3 reflectDir = reflect(-lightDir, normal);
-	float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-	vec3 specular = light.specular * spec * vec3(texture(material.texture_specular1, TexCoords));
-
-	// attenuation
-	float distance = length(light.position - fragPos);
-	float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
-
-	ambient *= attenuation;
-	diffuse *= attenuation * intensity;
-	specular *= attenuation * intensity;
-
-	return (ambient + diffuse + specular);
+	return (diffuse + specular) * attenuation;
 }
 )FSH";
 
@@ -212,6 +138,8 @@ void main()
 }
 )FSH";
 
+// Unified Deferred screen-space shader: matches Forward cubeFSH lighting model.
+// Global ambient 0.05 + per-light diffuse/specular with attenuation.
 inline const char* screenFSH = R"FSH(
 #version 330 core
 
@@ -224,11 +152,9 @@ uniform sampler2D gAlbedoSpec;
 
 struct PointLight {
 	vec3 position;
-
+	vec3 color;       // diffuse & specular colour
 	float linear;
 	float quadratic;
-
-	vec3 color;
 };
 
 #define NR_POINT_LIGHTS 4
@@ -236,52 +162,85 @@ struct PointLight {
 uniform vec3 viewPos;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
 
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 diffuse_arg, float specular_arg, vec3 viewDir);
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
+                    vec3 diffuse_arg, float specular_arg);
 
 void main()
 {
 	vec3 FragPos = texture(gPosition, TexCoords).rgb;
-	vec3 Normal = texture(gNormal, TexCoords).rgb;
+	vec3 Normal  = texture(gNormal,   TexCoords).rgb;
 
 	// Discard background pixels that have no geometry (gPosition is sentinel 0,0,0)
 	if (length(FragPos) < 0.001 && length(Normal) < 0.001)
 		discard;
 
-	vec3 Diffuse = texture(gAlbedoSpec, TexCoords).rgb;
+	vec3 Diffuse  = texture(gAlbedoSpec, TexCoords).rgb;
 	float Specular = texture(gAlbedoSpec, TexCoords).a;
 
 	vec3 viewDir = normalize(viewPos - FragPos);
-	vec3 ambient = Diffuse * 0.1f;
+
+	// Global ambient — matches Forward cubeFSH
+	vec3 ambient = Diffuse * 0.05;
 	vec3 color = ambient;
 
 	for (int i = 0; i < NR_POINT_LIGHTS; i++)
-	{
-		color += CalcPointLight(pointLights[i], Normal, FragPos, Diffuse, Specular, viewDir);
-	}
+		color += CalcPointLight(pointLights[i], Normal, FragPos, viewDir,
+		                        Diffuse, Specular);
 
 	FragColor = vec4(color, 1.0);
 }
 
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 diffuse_arg, float specular_arg, vec3 viewDir)
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,
+                    vec3 diffuse_arg, float specular_arg)
 {
-	// diffuse
 	vec3 lightDir = normalize(light.position - fragPos);
 
-	float impact = max(dot(normal, lightDir), 0.0);
-	vec3 diffuse = light.color * impact * diffuse_arg;
+	// diffuse
+	float diff = max(dot(normal, lightDir), 0.0);
+	vec3 diffuse = light.color * diff * diffuse_arg;
 
-	// specular
+	// specular (scalar, matching Forward)
 	vec3 reflectDir = reflect(-lightDir, normal);
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
 	vec3 specular = light.color * spec * specular_arg;
 
-	// attenuation
+	// attenuation (constant = 1.0, matching Forward)
 	float distance = length(light.position - fragPos);
 	float attenuation = 1.0 / (1.0 + light.linear * distance + light.quadratic * (distance * distance));
 
-	diffuse *= attenuation;
-	specular *= attenuation;
-
-	return (diffuse + specular);
+	return (diffuse + specular) * attenuation;
 }
 )FSH";
+
+// Dynamic shader source generators: replace NR_POINT_LIGHTS at runtime.
+// Uses string search-and-replace on the inline shader sources above.
+// These allocate a full copy — acceptable since shader compilation is
+// a one-time cost per experiment configuration, not per frame.
+
+inline std::string getCubeFSH(int lightCount)
+{
+	   std::string src = cubeFSH;
+	   std::string oldDef = "#define NR_POINT_LIGHTS 4";
+	   std::string newDef = "#define NR_POINT_LIGHTS " + std::to_string(lightCount);
+	   size_t pos = src.find(oldDef);
+	   if (pos != std::string::npos)
+	       src.replace(pos, oldDef.length(), newDef);
+	   // DIAGNOSTIC: Print first ~120 chars of the shader source to verify NR_POINT_LIGHTS
+	   std::cout << "[DIAG getCubeFSH(" << lightCount << ")] src snippet: \""
+	             << src.substr(0, 120) << "...\"" << std::endl;
+	   return src;
+}
+
+inline std::string getScreenFSH(int lightCount)
+{
+	   std::string src = screenFSH;
+	   std::string oldDef = "#define NR_POINT_LIGHTS 4";
+	   std::string newDef = "#define NR_POINT_LIGHTS " + std::to_string(lightCount);
+	   size_t pos = src.find(oldDef);
+	   if (pos != std::string::npos)
+	       src.replace(pos, oldDef.length(), newDef);
+	   // DIAGNOSTIC: Print first ~120 chars of the shader source to verify NR_POINT_LIGHTS
+	   std::cout << "[DIAG getScreenFSH(" << lightCount << ")] src snippet: \""
+	             << src.substr(0, 120) << "...\"" << std::endl;
+	   return src;
+}
