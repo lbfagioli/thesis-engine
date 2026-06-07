@@ -1,3 +1,10 @@
+// Force NVIDIA GPU on Optimus laptops.
+#ifdef _WIN32
+extern "C" {
+    __declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
+}
+#endif
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -124,7 +131,7 @@ int main()
     GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "thesis-engine", NULL, NULL);
     if (!window) { glfwTerminate(); return -1; }
     glfwMakeContextCurrent(window);
-    // glfwSwapInterval(0); // Explicitly disable vsync
+    glfwSwapInterval(0); // Disable VSync for accurate GPU timing
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) return -1;
 
@@ -145,7 +152,7 @@ int main()
 
     // ---- Renderer (F1 to toggle Forward ↔ Deferred) ----
     std::unique_ptr<IRenderPipeline> renderer = std::make_unique<DeferredRenderer>();
-    renderer->init(displayWidth, displayHeight);
+    renderer->init(displayWidth, displayHeight, 4);
 
     bool f1Held = false;
 
@@ -157,12 +164,18 @@ int main()
     Model backpack(std::string(root_directory) + "/assets/backpack/backpack.obj");
     setupCube();
 
-    // ---- Light positions ----
+    // ---- Light positions and colours ----
     std::vector<glm::vec3> lightPositions = {
         glm::vec3( 0.7f,  0.2f,  2.0f),
         glm::vec3( 2.3f, -3.3f, -4.0f),
         glm::vec3(-4.0f,  2.0f, -12.0f),
         glm::vec3( 0.0f,  0.0f, -3.0f)
+    };
+    std::vector<glm::vec3> lightColors = {
+        glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f)
     };
 
     glm::vec3 cubePositions[] = {
@@ -215,7 +228,7 @@ int main()
                     renderer = std::make_unique<ForwardRenderer>();
                 else
                     renderer = std::make_unique<DeferredRenderer>();
-                renderer->init(displayWidth, displayHeight);
+                renderer->init(displayWidth, displayHeight, 4);
                 std::cout << "[TOGGLE] Switched to "
                           << (isDeferred ? "Forward" : "Deferred")
                           << " Renderer" << std::endl;
@@ -234,11 +247,9 @@ int main()
         glm::mat4 projection = camera.getProjectionMatrix();
 
         // ---- Geometry Pass ----
-        glClearColor(0.15f, 0.15f, 0.15f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        renderer->setCameraFront(camera.front());
-        renderer->beginGeometryPass(view, projection, camera.position(), lightPositions);
+        // (each renderer clears its own target inside beginGeometryPass)
+        renderer->beginGeometryPass(view, projection, camera.position(),
+                                    lightPositions, lightColors);
 
         // Draw backpack model
         glm::mat4 model(1.0f);
@@ -264,10 +275,10 @@ int main()
         glBindVertexArray(0);
 
         // ---- Lighting / Composite Pass ----
-        renderer->endGeometryPass(camera.position(), lightPositions);
+        renderer->endGeometryPass(camera.position(), lightPositions, lightColors);
 
         // ---- Debug Light Cubes ----
-        renderer->renderDebugLights(view, projection, lightPositions);
+        renderer->renderDebugLights(view, projection, lightPositions, lightColors);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
