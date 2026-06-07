@@ -10,6 +10,8 @@
 class Shader
 {
 public:
+    Shader() : m_id(0) {}
+
     Shader(const char* vertexSource, const char* fragmentSource)
     {
         unsigned int vertexShader = makeShader(GL_VERTEX_SHADER, vertexSource);

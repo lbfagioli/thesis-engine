@@ -25,7 +25,22 @@ add_executable(${PROJECT_NAME}
     ${CMAKE_SOURCE_DIR}/src/texture.cpp
 )
 
+add_executable(thesis-experiment
+    ${CMAKE_SOURCE_DIR}/src/experiment_main.cpp
+    ${CMAKE_SOURCE_DIR}/src/deferred_renderer.cpp
+    ${CMAKE_SOURCE_DIR}/src/forward_renderer.cpp
+    ${CMAKE_SOURCE_DIR}/src/texture.cpp
+)
+
 target_include_directories(${PROJECT_NAME} PUBLIC
+    ${CMAKE_BINARY_DIR}/configuration/
+    ${CMAKE_SOURCE_DIR}/include
+    ${EXT_DIR}/glfw/includes
+    ${EXT_DIR}/glm/includes
+    ${EXT_DIR}/assimp/includes
+)
+
+target_include_directories(thesis-experiment PUBLIC
     ${CMAKE_BINARY_DIR}/configuration/
     ${CMAKE_SOURCE_DIR}/include
     ${EXT_DIR}/glfw/includes
@@ -44,12 +59,31 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     ${EXT_DIR}/assimp/libs/assimp-vc143-mtd.lib
 )
 
+target_link_libraries(thesis-experiment PUBLIC
+    OpenGL::GL
+    glad
+    stb_image
+    ${EXT_DIR}/assimp/libs/assimp-vc143-mtd.lib
+)
+
 if(WIN32)
     target_link_libraries(${PROJECT_NAME} PUBLIC
         ${EXT_DIR}/glfw/libs/glfw3.lib
     )
+    target_link_libraries(thesis-experiment PUBLIC
+        ${EXT_DIR}/glfw/libs/glfw3.lib
+    )
 else()
     target_link_libraries(${PROJECT_NAME} PUBLIC
+        ${EXT_DIR}/glfw/libs/libglfw3.a
+        m
+        X11
+        pthread
+        Xrandr
+        Xi
+        dl
+    )
+    target_link_libraries(thesis-experiment PUBLIC
         ${EXT_DIR}/glfw/libs/libglfw3.a
         m
         X11
